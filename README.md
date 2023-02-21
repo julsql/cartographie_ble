@@ -16,18 +16,23 @@ Brancher la carte sur le port UART
 
 ## Connaître son port :
 
-(Trouver le port)[https://docs.espressif.com/projects/esp-idf/en/v4.4-beta1/esp32/get-started/establish-serial-connection.html]
+[Trouver le port](https://docs.espressif.com/projects/esp-idf/en/v4.4-beta1/esp32/get-started/establish-serial-connection.html)
 
-Port on Mac:
+Ports sur Mac :
 
     /dev/cu.usbserial-XXXX
 
-Port on Windows:
+Ports sur Linux :
+
+    /dev/ttyXXXX
+
+Ports sur Windows :
+    
     COMX
 
 Trouver le port (Mac & Linux):
 
-> run before and after connecting
+Exécuter avant et apès avoir connecté ESP32 pour voir le port en plus :
 
 > Sur Mac :
 
@@ -47,7 +52,7 @@ Installer le programme esptool.py
 
 Télécharger : [GENERIC_S3-20220618-v1.19.1.bin](https://micropython.org/resources/firmware/GENERIC_S3-20220618-v1.19.1.bin)
 
-Executer les commandes suivantes :
+Exécuter les commandes suivantes :
 
     esptool.py --chip esp32s3 --port <port> erase_flash
     esptool.py --chip esp32s3 --port <port> write_flash -z 0 GENERIC_S3-20220618-v1.19.1.bin
@@ -80,17 +85,17 @@ Trouver les connexions actives :
 
 - On le déplace dans la ESP32-S3 (Attention à bien stopper toutes les connexions avec la ESP32 avant, sinon la débrancher)
 
-    ampy --port <port> put main.py
+        ampy --port <port> put main.py
 
 - On Lance la connexion avec la ESP32 et on arrive sur un terminal python
 
 - On peut donc executer du python, par exemple le fichier qu'on a déplacé :
 
-    >>> import main
+        >>> import main
 
 ## Scanner les appareils : Installation de Aioble
 
-> https://github.com/micropython/micropython-lib/tree/master/micropython/bluetooth/aioble
+> [Aioble](https://github.com/micropython/micropython-lib/tree/master/micropython/bluetooth/aioble)
 
     pip install mpremote
     pip install mip
