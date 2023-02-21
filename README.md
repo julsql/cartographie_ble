@@ -79,7 +79,7 @@ Trouver les connexions actives :
     
     lsof | grep usbserial
 
-## Executer notre fichier
+## Exécuter notre fichier
 
 - On modifie notre fichier python (ex : main.py)
 
