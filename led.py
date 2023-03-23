@@ -2,6 +2,7 @@
 
 import machine
 import neopixel
+import time
 
 print("Allumer la LED")
 
@@ -16,4 +17,7 @@ leds = neopixel.NeoPixel(led_pin, num_leds)
 
 # Activer la LED avec une couleur spécifique (ici, rouge)
 leds[0] = (255, 0, 0)
+leds.write()
+time.sleep(3)
+leds[0] = (0, 0, 0)
 leds.write()
