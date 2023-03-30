@@ -1,27 +1,30 @@
-#import bluetooth
-###
-# Configura o objeto do adaptador Bluetooth
-#bt_adapter = bluetooth.Bluetooth()
+from bluepy.btle import Scanner, DefaultDelegate
 
-# Verifica se o adaptador está disponível
-#if bt_adapter.available():
+class ScanDelegate(DefaultDelegate):
+    def __init__(self):
+        DefaultDelegate.__init__(self)
 
-    # Inicia o scan de dispositivos BLE
-#    bt_adapter.start_scan(10)
+    def handleDiscovery(self, dev, isNewDev, isNewData):
+        if isNewDev:
+            print("Dispositivo encontrado:", dev.addr)
+        elif isNewData:
+            print("Dados novos do dispositivo:", dev.addr)
 
-    # Aguarda até que os dispositivos sejam encontrados
-#    while bt_adapter.ble_scan_active():
-#        bt_devices = bt_adapter.get_discovered_devices()
+        for (adtype, desc, value) in dev.getScanData():
+            print("  %s = %s" % (desc, value))
 
-        # Exibe informações sobre os dispositivos encontrados
-#        for device in bt_devices:
-#            print("Dispositivo encontrado: %s, endereço: %s" % (device.name, device.address))
+scanner = Scanner().withDelegate(ScanDelegate())
+devices = scanner.scan(10.0)
 
-    # Para o scan de dispositivos BLE
-#    bt_adapter.stop_scan()
-#else:
-#    print("Adaptador Bluetooth indisponível.")
-def main():
-    print("Fala ai rapaziada")
-if __name__ == "__main__":
-    main()
+for dev in devices:
+    print("Dispositivo %s (%s), endereço %s, RSSI=%d dB" % (dev.addr, dev.addrType, dev.getValueText(9), dev.rssi))
+
+    for (adtype, desc, value) in dev.getScanData():
+        print("  %s = %s" % (desc, value))
+
+    if dev.servicesResolved:
+        for svc in dev.services:
+            print("Serviço encontrado: %s, UUID = %s" % (svc.uuid.getCommonName(), svc.uuid))
+
+            for ch in svc.getCharacteristics():
+                print("  Característica encontrada: %s, UUID = %s" % (ch.uuid.getCommonName(), ch.uuid))
