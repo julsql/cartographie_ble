@@ -1,25 +1,84 @@
-import socket
+import uasyncio as asyncio
+import aioble
+import bluetooth
 
-# Définir l'adresse IP de l'ESP32 et le numéro de port à écouter
-ip_address = '0.0.0.0'  # écoute sur toutes les interfaces
-port = 1234
 
-# Créer une socket d'écoute TCP/IP
-sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-sock.bind((ip_address, port))
-sock.listen(1)  # une seule connexion simultanée autorisée
+# Randomly generated UUIDs.
+_FILE_SERVICE_UUID = bluetooth.UUID("0492fcec-7194-11eb-9439-0242ac130002")
+_CONTROL_CHARACTERISTIC_UUID = bluetooth.UUID("0492fcec-7194-11eb-9439-0242ac130003")
 
-print('En attente de connexion sur', ip_address, ':', port)
+# How frequently to send advertising beacons.
+_ADV_INTERVAL_MS = 250_000
 
-# Attendre qu'une connexion soit établie
-conn, addr = sock.accept()
-print('Connexion établie avec', addr)
+# Register GATT server.
+file_service = aioble.Service(_FILE_SERVICE_UUID)
+control_characteristic = aioble.Characteristic(
+    file_service, _CONTROL_CHARACTERISTIC_UUID, write=True, notify=True
+)
+aioble.register_services(file_service)
 
-# Recevoir des données de la connexion
-data = conn.recv(1024)
+async def control_task(connection):
+    try:
+        with connection.timeout(None):
+            while True:
+                print("Waiting for write")
+                await control_characteristic.written()
+                msg = control_characteristic.read()
+                control_characteristic.write(b"")
 
-# Afficher les données reçues
-print('Données reçues:', data.decode())
+                if len(msg) < 3:
+                    continue
 
-# Fermer la connexion
-conn.close()
+                # Message is <command><seq><path...>.
+
+                command = msg[0]
+                seq = msg[1]
+                data = msg[2:].decode()
+
+                return data
+            
+    except aioble.DeviceDisconnectedError:
+        return
+    
+
+# Serially wait for connections. Don't advertise while a central is
+# connected.
+async def peripheral_task():
+    while True:
+        print("")
+        print("Waiting for connection")
+        connection = await aioble.advertise(
+            _ADV_INTERVAL_MS,
+            name="mpy-file",
+            services=[_FILE_SERVICE_UUID],
+        )
+        print("Connection from", connection.device)
+
+        try:
+            with connection.timeout(None):
+                while True:
+                    print("Waiting for write")
+                    await control_characteristic.written()
+                    msg = control_characteristic.read()
+                    control_characteristic.write(b"")
+
+                    if len(msg) < 3:
+                        continue
+
+                    # Message is <command><seq><path...>.
+                    command = msg[0]
+                    seq = msg[1]
+                    data = msg[2:]
+
+                    # Process the received data as needed
+                    print("Received data:", data.decode())
+
+        except aioble.DeviceDisconnectedError:
+            return
+
+# Run both tasks.
+async def main():
+    await peripheral_task()
+
+
+asyncio.run(main())

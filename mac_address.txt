@@ -1,3 +1,3 @@
-Juliette : 7c:df:a1:e8:6b:c8
-Gabriel : 7c:df:a1:e8:6c:bc
-Théo : 7c:df:a1:e7:d0:64
+Gabriel : 7C:DF:A1:E8:6B:C8
+Juliette : 7C:DF:A1:E8:6C:BC
+Théo : 7C:DF:A1:E7:D0:64
