@@ -20,6 +20,20 @@ _CONTROL_CHARACTERISTIC_UUID = bluetooth.UUID("0492fcec-7194-11eb-9439-0242ac130
 
 _COMMAND_SEND = const(0)
 
+# Randomly generated UUIDs.
+_FILE_SERVICE_UUID = bluetooth.UUID("0492fcec-7194-11eb-9439-0242ac130002")
+_CONTROL_CHARACTERISTIC_UUID = bluetooth.UUID("0492fcec-7194-11eb-9439-0242ac130003")
+
+# How frequently to send advertising beacons.
+_ADV_INTERVAL_MS = 250_000
+
+# Register GATT server.
+file_service = aioble.Service(_FILE_SERVICE_UUID)
+control_characteristic = aioble.Characteristic(
+    file_service, _CONTROL_CHARACTERISTIC_UUID, write=True, notify=True
+)
+aioble.register_services(file_service)
+
 class Client:
     def __init__(self, device):
         self._device = device
@@ -30,6 +44,7 @@ class Client:
         try:
             print("Connecting to", self._device)
             self._connection = await self._device.connect()
+            print(type(self._connection))
         except asyncio.TimeoutError:
             print("Timeout during connection")
             return
@@ -47,6 +62,13 @@ class Client:
     async def send_message(self, message):
         print("Sending message:", message)
         await self._command(_COMMAND_SEND, message.encode())
+
+    async def get_response(self):
+        await control_characteristic.written()
+        msg = control_characteristic.read()
+        control_characteristic.write(b"")
+
+        return msg[0:].decode()
 
     async def _command(self, cmd, data):
         send_seq = self._seq
@@ -66,32 +88,36 @@ def get_mac_address(mac_bytes):
     formatted_mac = ':'.join(mac_string[i:i+2].upper() for i in range(0, 12, 2))
     return formatted_mac
 
+devices = []
+tree = {}
+
 async def main():
     async with aioble.scan(5000, 30000, 30000, active=True) as scanner:
         async for result in scanner:
-            if result.name() == "mpy-file" and _FILE_SERVICE_UUID in result.services():
-                mac = get_mac_address(result.device.addr)
+            mac = get_mac_address(result.device.addr)
+            tree[mac] = []
+            if result.name() == "esp-server" and _FILE_SERVICE_UUID in result.services():
                 print(mac)
                 #if mac == "7C:DF:A1:E7:D0:66":
-                device = result.device
-                break
+                devices.append(result.device)
+                
         else:
-            print("File server not found")
-            return
+            if (len(devices) == 0):
+                print("File server not found")
+                return
 
-    client = Client(device)
+    for device in devices:
+        client = Client(device)
 
-    await client.connect()
+        await client.connect()
+        
+        await client.send_message("look")
 
-    """while true:
-        data = input("write data to send (exit to quit)")
-        if data.lower() == 'exit':
-            break
-        await client.send_message(data)"""
-    
-    await client.send_message("Hello World")
+        response = await client.get_response()
+        print("Received data:", response)
+        tree[get_mac_address(device.addr)] = response.split(",")
 
-    await client.disconnect()
-
+        await client.disconnect()
+    print("tree", tree)
 
 asyncio.run(main())
