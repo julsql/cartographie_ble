@@ -1,31 +1,11 @@
-# MIT license; Copyright (c) 2021 Jim Mussared
-
-# This is a WIP client for l2cap_file_server.py. See that file for more
-# information.
-
-import sys
-
-sys.path.append("")
-
-from micropython import const
-
 import uasyncio as asyncio
 import aioble
 import bluetooth
-
-import struct
-
-_FILE_SERVICE_UUID = bluetooth.UUID("0492fcec-7194-11eb-9439-0242ac130002")
-_CONTROL_CHARACTERISTIC_UUID = bluetooth.UUID("0492fcec-7194-11eb-9439-0242ac130003")
-
-_COMMAND_SEND = const(0)
+import binascii
 
 # Randomly generated UUIDs.
 _FILE_SERVICE_UUID = bluetooth.UUID("0492fcec-7194-11eb-9439-0242ac130002")
 _CONTROL_CHARACTERISTIC_UUID = bluetooth.UUID("0492fcec-7194-11eb-9439-0242ac130003")
-
-# How frequently to send advertising beacons.
-_ADV_INTERVAL_MS = 250_000
 
 # Register GATT server.
 file_service = aioble.Service(_FILE_SERVICE_UUID)
@@ -44,7 +24,6 @@ class Client:
         try:
             print("Connecting to", self._device)
             self._connection = await self._device.connect()
-            print(type(self._connection))
         except asyncio.TimeoutError:
             print("Timeout during connection")
             return
@@ -61,26 +40,34 @@ class Client:
 
     async def send_message(self, message):
         print("Sending message:", message)
-        await self._command(_COMMAND_SEND, message.encode())
+        await self._command(message.encode())
 
     async def get_response(self):
         await control_characteristic.written()
         msg = control_characteristic.read()
         control_characteristic.write(b"")
+        nb_value = int(msg[0])
+        data_complete = []
+        for i in range(0, nb_value):
+            print("VALUE {}/{} RECEIVED".format(i+1, nb_value))
+            await self.send_message("value received")
+            await control_characteristic.written()
+            msg = control_characteristic.read()
+            control_characteristic.write(b"")
+            data = msg[0:].decode()
+            data_complete.append(data)
 
-        return msg[0:].decode()
+        return data_complete
 
-    async def _command(self, cmd, data):
+    async def _command(self, data):
         send_seq = self._seq
-        await self._control_characteristic.write(struct.pack("<BB", cmd, send_seq) + data)
+        await self._control_characteristic.write(data)
         self._seq += 1
         return send_seq
 
     async def disconnect(self):
         if self._connection:
             await self._connection.disconnect()
-
-import binascii
 
 def get_mac_address(mac_bytes):
     # result.device.addr
@@ -90,6 +77,7 @@ def get_mac_address(mac_bytes):
 
 devices = []
 tree = {}
+macs = []
 
 async def main():
     async with aioble.scan(5000, 30000, 30000, active=True) as scanner:
@@ -97,15 +85,18 @@ async def main():
             mac = get_mac_address(result.device.addr)
             tree[mac] = []
             if result.name() == "esp-server" and _FILE_SERVICE_UUID in result.services():
-                print(mac)
-                #if mac == "7C:DF:A1:E7:D0:66":
-                devices.append(result.device)
+                if mac not in macs:
+                    print(mac)
+                    macs.append(mac)
+                    devices.append(result.device)
+                #break
                 
         else:
             if (len(devices) == 0):
                 print("File server not found")
                 return
-
+            
+    print(devices)
     for device in devices:
         client = Client(device)
 
@@ -115,9 +106,10 @@ async def main():
 
         response = await client.get_response()
         print("Received data:", response)
-        tree[get_mac_address(device.addr)] = response.split(",")
+        tree[get_mac_address(device.addr)] = response
 
         await client.disconnect()
-    print("tree", tree)
+
+    print("tree: ", tree)
 
 asyncio.run(main())
