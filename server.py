@@ -1,13 +1,12 @@
 import uasyncio as asyncio
 import aioble
 import bluetooth
+import binascii
 import struct
-from micropython import const
 
 # Randomly generated UUIDs.
 _FILE_SERVICE_UUID = bluetooth.UUID("0492fcec-7194-11eb-9439-0242ac130002")
 _CONTROL_CHARACTERISTIC_UUID = bluetooth.UUID("0492fcec-7194-11eb-9439-0242ac130003")
-_COMMAND_SEND = const(0)
 
 # How frequently to send advertising beacons.
 _ADV_INTERVAL_MS = 250_000
@@ -21,55 +20,39 @@ aioble.register_services(file_service)
 
 server_mac = ""
 
-async def control_task(connection):
-    try:
-        with connection.timeout(None):
-            while True:
-                print("Waiting for write")
-                await control_characteristic.written()
-                msg = control_characteristic.read()
-                control_characteristic.write(b"")
-
-                if len(msg) < 3:
-                    continue
-
-                # Message is <command><seq><path...>.
-
-                command = msg[0]
-                seq = msg[1]
-                data = msg[2:].decode()
-
-                return data
-            
-    except aioble.DeviceDisconnectedError:
-        return
-    
-async def write(connection, data):
+async def write(connection, values):
     try:
         print("Sending data")
         file_service = await connection.service(_FILE_SERVICE_UUID)
         new_control_characteristic = await file_service.characteristic(
             _CONTROL_CHARACTERISTIC_UUID
         )
-        await new_control_characteristic.write(struct.pack("<BB", _COMMAND_SEND, 1) + data.encode())
-
+        print(values)
+        nb_value = len(values)
+        await new_control_characteristic.write(struct.pack("<BB", nb_value))
+        for value in values:
+            await control_characteristic.written()
+            msg = control_characteristic.read()
+            control_characteristic.write(b"")
+            data = msg[0:].decode()
+            if data == "value received":
+                print("SENDING: ", value)
+                await new_control_characteristic.write(value.encode())
 
     except asyncio.TimeoutError:
         print("Timeout discovering services/characteristics")
         return
     
 async def get_neighbour():
-    neigh = ""
-    async with aioble.scan(duration_ms=5000) as scanner:
+    neigh = []
+    async with aioble.scan(5000, 30000, 30000, active=True) as scanner:
         async for result in scanner:
             mac = get_mac_address(result.device.addr)
-            print("MAC ADDRESS: ", mac)
-            if mac != server_mac:
-                print(result, result.name(), result.rssi, result.services())
-                neigh += mac + ","
-    return neigh[:-1]
-    
-import binascii
+            if mac != server_mac and mac not in neigh :
+                print("MAC ADDRESS: ", mac)
+                #print(result, result.name(), result.rssi, result.services())
+                neigh.append(mac)
+    return neigh
 
 def get_mac_address(mac_bytes):
     # result.device.addr
@@ -101,21 +84,14 @@ async def peripheral_task():
                     msg = control_characteristic.read()
                     control_characteristic.write(b"")
 
-                    print(dir(control_characteristic))
-
-                    if len(msg) < 3:
-                        continue
-
-                    # Message is <command><seq><path...>.
-                    command = msg[0]
-                    seq = msg[1]
-                    data = msg[2:].decode()
+                    data = msg[0:].decode()
 
                     # Process the received data as needed
                     print("Received data:", data)
                     if data == "look":
 
-                        to_send = get_neighbour()
+                        to_send = await get_neighbour()
+                        print("neightbour: ", to_send)
 
                         await write(connection, to_send)
 

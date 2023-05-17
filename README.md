@@ -1,4 +1,5 @@
 # NET4104 - Internet sans fil : concepts, technologies et architectures
+
 Gabriel Lima
 Théo Lardeur
 Juliette Debono
@@ -8,13 +9,14 @@ Juliette Debono
 Le but de notre projet et d'obtenir les appareils détéctables par notre ESP32-S3, ainsi que les appareils détéctables par les appreils que nous avons trouvé etc… et d'en faire une représentation.
 Possibilité d'afficher cette représentation via un [serveur web](https://gcworks.fr/tutoriel/esp/Serveurweb.html)
 
-# Programmer sa ESP32-S3 avec MicroPython
+## Programmer sa ESP32-S3 avec MicroPython
+
 [Installation de MicroPython](https://micropython.org/download/GENERIC_S3/)
 [Bibliotheques MicroPython](https://github.com/micropython/micropython-lib)
 
 Brancher la carte sur le port UART
 
-## Connaître son port :
+## Connaître son port
 
 [Trouver le port](https://docs.espressif.com/projects/esp-idf/en/v4.4-beta1/esp32/get-started/establish-serial-connection.html)
 
@@ -27,7 +29,7 @@ Ports sur Linux :
     /dev/ttyXXXX
 
 Ports sur Windows :
-    
+
     COMX
 
 Trouver le port (Mac & Linux):
@@ -57,7 +59,6 @@ Exécuter les commandes suivantes :
     esptool.py --chip esp32s3 --port <port> erase_flash
     esptool.py --chip esp32s3 --port <port> write_flash -z 0 GENERIC_S3-20220618-v1.19.1.bin
 
-
 ## Utiliser Python
 
 Créer un fichier python et le déplacer dans ESP32-S3 :
@@ -76,7 +77,7 @@ Se connecter via terminal :
     screen <port> 115200
 
 Trouver les connexions actives :
-    
+
     lsof | grep usbserial
 
 ## Exécuter notre fichier
