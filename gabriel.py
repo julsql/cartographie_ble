@@ -1,23 +1,27 @@
-import bluetooth
+import random
 
-# Configura o objeto do adaptador Bluetooth
-bt_adapter = bluetooth.Bluetooth()
+def gerar_esp32_aleatoria(num_esp, num_aparelhos):
+    esp32_scan = []
+    for i in range(num_esp):
+        esp_id = f'ESP32_{i+1}'
+        num_conectados = random.randint(0, num_aparelhos)
+        aparelhos = [f'MAC{j+1}' for j in range(num_conectados)]
+        esp_dict = {esp_id: aparelhos}
+        esp32_scan.append(esp_dict)
+    return esp32_scan
 
-# Verifica se o adaptador está disponível
-if bt_adapter.available():
+num_esp = 3
+num_aparelhos = 5
 
-    # Inicia o scan de dispositivos BLE
-    bt_adapter.start_scan(10)
+esp32_scan = gerar_esp32_aleatoria(num_esp, num_aparelhos)
+print(esp32_scan)
 
-    # Aguarda até que os dispositivos sejam encontrados
-    while bt_adapter.ble_scan_active():
-        bt_devices = bt_adapter.get_discovered_devices()
+def exibir_scan_esp32(scan):
+    for esp in scan:
+        for esp_id, aparelhos in esp.items():
+            print(esp_id + ':')
+            for aparelho in aparelhos:
+                print('  ' + aparelho)
 
-        # Exibe informações sobre os dispositivos encontrados
-        for device in bt_devices:
-            print("Dispositivo encontrado: %s, endereço: %s" % (device.name, device.address))
-
-    # Para o scan de dispositivos BLE
-    bt_adapter.stop_scan()
-else:
-    print("Adaptador Bluetooth indisponível.")
+print('Scan ESP32:')
+exibir_scan_esp32(esp32_scan)
