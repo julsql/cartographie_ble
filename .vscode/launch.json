@@ -8,8 +8,8 @@
       "args": [],
       "stopAtEntry": false,
       "externalConsole": true,
-      "cwd": "c:/Users/yudig/cartographie_ble",
-      "program": "c:/Users/yudig/cartographie_ble/build/Debug/outDebug",
+      "cwd": "c:/Users/yudig/OneDrive/Área de Trabalho/TSP/Telecom/InternetSansFil/cartographie_ble",
+      "program": "c:/Users/yudig/OneDrive/Área de Trabalho/TSP/Telecom/InternetSansFil/cartographie_ble/build/Debug/outDebug",
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",
       "setupCommands": [
