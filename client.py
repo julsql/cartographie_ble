@@ -2,17 +2,18 @@ import uasyncio as asyncio
 import aioble
 import bluetooth
 import binascii
+import values
 
 # Randomly generated UUIDs.
-_FILE_SERVICE_UUID = bluetooth.UUID("0492fcec-7194-11eb-9439-0242ac130002")
-_CONTROL_CHARACTERISTIC_UUID = bluetooth.UUID("0492fcec-7194-11eb-9439-0242ac130003")
+_SERVICE_UUID = bluetooth.UUID(values.SERVICE_UUID_STR)
+_CONTROL_CHARACTERISTIC_UUID = bluetooth.UUID(values.CHARACTERISTIC_UUID_STR)
 
 # Register GATT server.
-file_service = aioble.Service(_FILE_SERVICE_UUID)
+my_service = aioble.Service(_SERVICE_UUID)
 control_characteristic = aioble.Characteristic(
-    file_service, _CONTROL_CHARACTERISTIC_UUID, write=True, notify=True
+    my_service, _CONTROL_CHARACTERISTIC_UUID, write=True, notify=True
 )
-aioble.register_services(file_service)
+aioble.register_services(my_service)
 
 class Client:
     def __init__(self, device):
@@ -30,8 +31,8 @@ class Client:
 
         try:
             print("Discovering...")
-            file_service = await self._connection.service(_FILE_SERVICE_UUID)
-            self._control_characteristic = await file_service.characteristic(
+            my_service = await self._connection.service(_SERVICE_UUID)
+            self._control_characteristic = await my_service.characteristic(
                 _CONTROL_CHARACTERISTIC_UUID
             )
         except asyncio.TimeoutError:
@@ -75,16 +76,17 @@ def get_mac_address(mac_bytes):
     formatted_mac = ':'.join(mac_string[i:i+2].upper() for i in range(0, 12, 2))
     return formatted_mac
 
-devices = []
-tree = {}
-macs = []
+
 
 async def main():
+    devices = []
+    tree = {}
+    macs = []
     async with aioble.scan(5000, 30000, 30000, active=True) as scanner:
         async for result in scanner:
             mac = get_mac_address(result.device.addr)
             tree[mac] = []
-            if result.name() == "esp-server" and _FILE_SERVICE_UUID in result.services():
+            if result.name() == values.NAME and _SERVICE_UUID in result.services():
                 if mac not in macs:
                     print(mac)
                     macs.append(mac)
@@ -93,7 +95,7 @@ async def main():
                 
         else:
             if (len(devices) == 0):
-                print("File server not found")
+                print("Server not found")
                 return
             
     print(devices)
@@ -110,6 +112,7 @@ async def main():
 
         await client.disconnect()
 
-    print("tree: ", tree)
+    return tree
 
-asyncio.run(main())
+tree = asyncio.run(main())
+print("tree: ", tree)

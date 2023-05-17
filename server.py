@@ -3,28 +3,29 @@ import aioble
 import bluetooth
 import binascii
 import struct
+import values
 
 # Randomly generated UUIDs.
-_FILE_SERVICE_UUID = bluetooth.UUID("0492fcec-7194-11eb-9439-0242ac130002")
-_CONTROL_CHARACTERISTIC_UUID = bluetooth.UUID("0492fcec-7194-11eb-9439-0242ac130003")
+_SERVICE_UUID = bluetooth.UUID(values.SERVICE_UUID_STR)
+_CONTROL_CHARACTERISTIC_UUID = bluetooth.UUID(values.CHARACTERISTIC_UUID_STR)
 
 # How frequently to send advertising beacons.
 _ADV_INTERVAL_MS = 250_000
 
 # Register GATT server.
-file_service = aioble.Service(_FILE_SERVICE_UUID)
+my_service = aioble.Service(_SERVICE_UUID)
 control_characteristic = aioble.Characteristic(
-    file_service, _CONTROL_CHARACTERISTIC_UUID, write=True, notify=True
+    my_service, _CONTROL_CHARACTERISTIC_UUID, write=True, notify=True
 )
-aioble.register_services(file_service)
+aioble.register_services(my_service)
 
 server_mac = ""
 
 async def write(connection, values):
     try:
         print("Sending data")
-        file_service = await connection.service(_FILE_SERVICE_UUID)
-        new_control_characteristic = await file_service.characteristic(
+        my_service = await connection.service(_SERVICE_UUID)
+        new_control_characteristic = await my_service.characteristic(
             _CONTROL_CHARACTERISTIC_UUID
         )
         print(values)
@@ -68,8 +69,8 @@ async def peripheral_task():
         print("Waiting for connection")
         connection = await aioble.advertise(
             _ADV_INTERVAL_MS,
-            name="esp-server",
-            services=[_FILE_SERVICE_UUID],
+            name=values.NAME,
+            services=[_SERVICE_UUID],
         )
         print("Connection from", connection.device)
         global server_mac
