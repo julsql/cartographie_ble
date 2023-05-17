@@ -1,6 +1,6 @@
 #!/bin/sh
 
-PORT=/dev/cu.usbserial-1410
+PORT=/dev/cu.usbserial-110
 
 ampy --port $PORT put $PWD/main.py
 ampy --port $PORT put $PWD/boot.py

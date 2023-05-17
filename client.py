@@ -95,8 +95,8 @@ async def main():
                 
         else:
             if (len(devices) == 0):
-                print("Server not found")
-                return
+                print("No other ESP found")
+                return tree
             
     print(devices)
     for device in devices:
