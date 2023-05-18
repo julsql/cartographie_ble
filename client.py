@@ -115,4 +115,30 @@ async def main():
     return tree
 
 tree = asyncio.run(main())
-print("tree: ", tree)
+
+
+def print_tree(tree, level=0, printed_devices=None):
+    if printed_devices is None:
+        printed_devices = set()                                     #Crée l'ensemble
+
+    if isinstance(tree, dict):                                      #Montre la liste complète des dispositifs trouvés                 
+        print('Liste des dispositifs trouvés \n')
+        for mac, devices in tree.items():                       
+            indent = '  ' * level
+            if mac not in printed_devices:
+                print(f'{indent}{mac}')
+                printed_devices.add(mac)
+
+            if devices:                                             #S'il scan l'autre ESP, montre la liste des dispositifs trouvés par cela
+                print("Les dispositifs trouvés par cet ESP")
+                print_tree(devices, level+1, printed_devices)
+    elif isinstance(tree, list):
+        for device in tree:
+            indent = '  ' * level
+            if device not in printed_devices:                       #Vérifie si le dispositif a déjà été imprimé et l'ajoute à l'ensemble
+                print(f'{indent}{device}')
+                printed_devices.add(device)
+
+
+
+print_tree(tree)
