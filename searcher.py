@@ -158,6 +158,7 @@ async def main():
     return tree
 
 led_on("green")
+print("READY TO SEARCH")
 tree = asyncio.run(main())
 led_off()
 
@@ -166,7 +167,7 @@ import ubinascii
 
 # Récupérer l'adresse MAC de l'ESP32
 def get_mac():
-    return(ubinascii.hexlify(machine.unique_id(), ':').decode())
+    return(ubinascii.hexlify(machine.unique_id(), ':').decode().upper())
 
 def print_tree(tree, level=0, printed_devices=[]):
     if len(printed_devices) == 0:
