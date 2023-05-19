@@ -5,6 +5,29 @@ import binascii
 import struct
 import values
 
+import machine
+import neopixel
+
+num_leds = 1
+
+led_pin = machine.Pin(48, machine.Pin.OUT)
+leds = neopixel.NeoPixel(led_pin, num_leds)
+
+def led_on(color="blue"):
+    if color == "red":
+        leds[0] = (255, 0, 0)
+    if color == "green":
+        leds[0] = (0, 255, 0)
+    if color == "blue":
+        leds[0] = (0, 0, 255)
+    leds.write()
+    
+def led_off():
+
+    leds[0] = (0, 0, 0)
+    leds.write()
+
+
 # Randomly generated UUIDs.
 _SERVICE_UUID = bluetooth.UUID(values.SERVICE_UUID_STR)
 _CONTROL_CHARACTERISTIC_UUID = bluetooth.UUID(values.CHARACTERISTIC_UUID_STR)
@@ -21,14 +44,24 @@ aioble.register_services(my_service)
 
 server_mac = ""
 
-async def write(connection, values):
+async def send_message(connection, message):
     try:
-        print("Sending data")
         my_service = await connection.service(_SERVICE_UUID)
         new_control_characteristic = await my_service.characteristic(
             _CONTROL_CHARACTERISTIC_UUID
         )
-        print(values)
+        await new_control_characteristic.write(message.encode())
+
+    except asyncio.TimeoutError:
+        print("Timeout discovering services/characteristics")
+        return
+
+async def send_list(connection, values):
+    try:
+        my_service = await connection.service(_SERVICE_UUID)
+        new_control_characteristic = await my_service.characteristic(
+            _CONTROL_CHARACTERISTIC_UUID
+        )
         nb_value = len(values)
         await new_control_characteristic.write(struct.pack("<BB", nb_value))
         for value in values:
@@ -37,21 +70,18 @@ async def write(connection, values):
             control_characteristic.write(b"")
             data = msg[0:].decode()
             if data == "value received":
-                print("SENDING: ", value)
                 await new_control_characteristic.write(value.encode())
 
     except asyncio.TimeoutError:
         print("Timeout discovering services/characteristics")
         return
     
-async def get_neighbour():
+async def get_neighbour(forbidden):
     neigh = []
-    async with aioble.scan(5000, 30000, 30000, active=True) as scanner:
+    async with aioble.scan(5000, 60000, 60000, active=True) as scanner:
         async for result in scanner:
             mac = get_mac_address(result.device.addr)
-            if mac != server_mac and mac not in neigh :
-                print("MAC ADDRESS: ", mac)
-                #print(result, result.name(), result.rssi, result.services())
+            if mac != server_mac and mac not in neigh and not mac in forbidden :
                 neigh.append(mac)
     return neigh
 
@@ -65,14 +95,11 @@ def get_mac_address(mac_bytes):
 # connected.
 async def peripheral_task():
     while True:
-        print("")
-        print("Waiting for connection")
         connection = await aioble.advertise(
             _ADV_INTERVAL_MS,
             name=values.NAME,
             services=[_SERVICE_UUID],
         )
-        print("Connection from", connection.device)
         global server_mac
         server_mac = get_mac_address(connection.device.addr)
 
@@ -80,29 +107,50 @@ async def peripheral_task():
         try:
             with connection.timeout(None):
                 while True:
-                    print("Waiting for write")
                     await control_characteristic.written()
                     msg = control_characteristic.read()
                     control_characteristic.write(b"")
 
-                    data = msg[0:].decode()
+                    data = msg[0]
 
                     # Process the received data as needed
-                    print("Received data:", data)
-                    if data == "look":
+                    
+                    try:
+                        nb_values = int(data)
+                    except:
+                        print ('wrong value send')
+                    else:
+                        already_ESP = []
+                        await send_message(connection, "value received")
+                        for _ in range(0, nb_values):
+                            await control_characteristic.written()
+                            msg = control_characteristic.read()
+                            control_characteristic.write(b"")
+                            data = msg[0:].decode()
+                            
+                            already_ESP.append(data)
+                            await send_message(connection, "value received")
 
-                        to_send = await get_neighbour()
-                        print("neightbour: ", to_send)
+                        await control_characteristic.written()
+                        msg = control_characteristic.read()
+                        control_characteristic.write(b"")
+                        data = msg[0:].decode()
+                        if data == "ok to receive":
+                            to_send = await get_neighbour(already_ESP)
 
-                        await write(connection, to_send)
-
+                            await send_list(connection, to_send)
+                        else:
+                            print("error")
 
         except aioble.DeviceDisconnectedError:
+            led_off()
             return
 
 # Run both tasks.
 async def main():
+    led_on("blue")
     await peripheral_task()
+    led_off()
 
 
 asyncio.run(main())
