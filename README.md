@@ -1,8 +1,8 @@
 # NET4104 - Internet sans fil : concepts, technologies et architectures
 
-Gabriel Lima
-Théo Lardeur
-Juliette Debono
+* Gabriel Lima
+* Théo Lardeur
+* Juliette Debono
 
 ## Cartographie des appareils BLE
 
