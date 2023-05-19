@@ -152,5 +152,5 @@ async def main():
     await peripheral_task()
     led_off()
 
-
+print("READY TO RECEIVE")
 asyncio.run(main())
