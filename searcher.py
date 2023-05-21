@@ -4,7 +4,7 @@ import bluetooth
 import binascii
 import values
 import struct 
-
+import ubinascii
 import machine
 import neopixel
 
@@ -161,9 +161,6 @@ led_on("green")
 print("READY TO SEARCH")
 tree = asyncio.run(main())
 led_off()
-
-import machine
-import ubinascii
 
 # Récupérer l'adresse MAC de l'ESP32
 def get_mac():
